@@ -146,11 +146,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   state: 3
-  canClimb: 0
-  bottomLadders: 0
-  topLadders: 0
-  ladders: {fileID: 0}
-  climbSpeed: 3
   rb: {fileID: 5760016525653136178}
   ground:
     serializedVersion: 2
@@ -160,8 +155,12 @@ MonoBehaviour:
   speed: 7
   hurtForce: 10
   availableJump: 0
-  totalJumps: 3
+  totalJumps: 2
   isGrounded: 0
+  _vertical: 0
+  isClimbing: 0
+  climbSpeed: 3
+  fall: {fileID: 0}
 --- !u!95 &5760016525653136191
 Animator:
   serializedVersion: 5

@@ -35,7 +35,11 @@ public class PlayerController : MonoBehaviour
     public bool isClimbing;
     public float climbSpeed;
 
+    private Vector3 respawnPoint;
+    public GameObject fall;
     private List<GameObject> ladders = new List<GameObject>();
+
+    private bool canMove = true;
 
     private void Awake()
     {
@@ -46,19 +50,19 @@ public class PlayerController : MonoBehaviour
         anim = GetComponent<Animator>();
         rb = GetComponent<Rigidbody2D>();
         coll = GetComponent<Collider2D>();
-        // PermanentUI.perm.heartsText.text = PermanentUI.perm.hearts.ToString();
+        respawnPoint = transform.position;
     }
 
 
     void Update()
     {
-        _vertical = Input.GetAxis("Vertical");
-
         VelocityState();
-        if (state != State.Hurt)
+       
+        if (state != State.Hurt && canMove)
         {
             Movement();
         }
+        fall.transform.position = new Vector2(transform.position.x, fall.transform.position.y);
     }
 
     private void CheckLadders()
@@ -75,7 +79,17 @@ public class PlayerController : MonoBehaviour
             isClimbing = false;
         }
     }
-
+    void CheckGround()
+    {
+        if (coll.IsTouchingLayers(ground))
+        {
+            isGrounded = true;
+        }
+        else
+        {
+            isGrounded = false;
+        }
+    }
     private void FixedUpdate()
     {
         CheckGround();
@@ -84,7 +98,6 @@ public class PlayerController : MonoBehaviour
         if (isClimbing)
         {
             rb.gravityScale = 0f;
-            JumpOrClimb();
         }
         else
         {
@@ -92,7 +105,7 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    
+
 
     private void OnTriggerEnter2D(Collider2D collision)
     {
@@ -105,16 +118,21 @@ public class PlayerController : MonoBehaviour
         if (collision.CompareTag("PowerUp"))
         {
             Destroy(collision.gameObject);
-            jump = 15f;
+            jump = 20f;
             GetComponent<SpriteRenderer>().color = Color.red;
             StartCoroutine(ResetPower());
 
         }
         if (collision.CompareTag("Ladders"))
         {
-            UnityEngine.Debug.Log("isClimbing is True");
+            UnityEngine.Debug.Log("isClimbing is True" + collision.gameObject);
             ladders.Add(collision.gameObject);
-            isClimbing = true;  
+            isClimbing = true;
+        }
+        if (collision.gameObject.tag == "Fall")
+        {
+            HeartsHandle();
+            transform.position = respawnPoint;
         }
     }
     private void OnTriggerExit2D(Collider2D collision)
@@ -143,8 +161,9 @@ public class PlayerController : MonoBehaviour
             {
                 anim.Play("hurt");
                 state = State.Hurt;
+                canMove = false;
                 availableJump = totalJumps;
-
+                StartCoroutine(TimeHurt());
                 HeartsHandle();
                 if (collision.gameObject.transform.position.x > transform.position.x)
                 {
@@ -191,39 +210,37 @@ public class PlayerController : MonoBehaviour
                 anim.Play("jump_up");
             }
         }
-        if (Input.GetKeyDown(KeyCode.UpArrow))
+        if (availableJump > 0 && !isClimbing)
         {
-            if (availableJump > 0 && !isClimbing)
+            if (Input.GetKeyDown(KeyCode.UpArrow))
             {
-                //JumpUp();
                 JumpOrClimb();
                 anim.Play("jump_up");
             }
-            if (isClimbing)
+        }
+        else if (isClimbing)
+        {
+            if (Input.GetKey(KeyCode.UpArrow))
             {
-                //Climb();
                 JumpOrClimb();
                 anim.Play("climb");
             }
         }
+
+        if (Input.GetKey(KeyCode.DownArrow))
+        {
+            if (isClimbing)
+            {
+                ClimbDown();
+                anim.Play("climb");
+            }
+        }
     }
-   /* public void JumpUp()
-    {
 
-        anim.Play("jump_up");
-        rb.velocity = new Vector2(rb.velocity.x, jump);
-        state = State.JumpUp;
-        availableJump--;
-
-    }
-
-    public void Climb()
-    {
-        rb.velocity = new Vector2(rb.velocity.x, _vertical * climbSpeed);
-    }*/
 
     public void JumpOrClimb()
     {
+        _vertical = 1;
         if (availableJump > 0 && !isClimbing)
         {
             UnityEngine.Debug.Log("Jump Jump");
@@ -235,8 +252,16 @@ public class PlayerController : MonoBehaviour
         }
         if (isClimbing)
         {
-           // UnityEngine.Debug.Log("Climb Climb");
+            rb.velocity = new Vector2(rb.velocity.x, _vertical * climbSpeed);
+            anim.Play("climb");
+        }
 
+    }
+    public void ClimbDown()
+    {
+        _vertical = -1;
+        if (isClimbing)
+        {
             rb.velocity = new Vector2(rb.velocity.x, _vertical * climbSpeed);
             anim.Play("climb");
         }
@@ -255,7 +280,7 @@ public class PlayerController : MonoBehaviour
 
     private void VelocityState()
     {
-        if (state == State.Climb || isClimbing )
+        if (state == State.Climb || isClimbing)
         {
             //Climb();
             anim.Play("climb");
@@ -285,7 +310,8 @@ public class PlayerController : MonoBehaviour
                 state = State.Idle;
             }
         }
-        else if (rb.velocity.x != 0 && rb.velocity.y <= 0.1f )
+
+        else if (Mathf.Abs(rb.velocity.x) > 2f)
         {
             state = State.Running;
             anim.Play("run");
@@ -295,30 +321,18 @@ public class PlayerController : MonoBehaviour
             state = State.Idle;
             anim.Play("idle");
         }
-
     }
 
     private IEnumerator ResetPower()
     {
         yield return new WaitForSeconds(5);
-        jump = 10f;
+        jump = 15;
         GetComponent<SpriteRenderer>().color = Color.white;
 
     }
-
-
-    void CheckGround()
+    private IEnumerator TimeHurt()
     {
-        if (coll.IsTouchingLayers(ground))
-        {
-            isGrounded = true;
-            availableJump = totalJumps;
-        }
-        else
-        {
-            isGrounded = false;
-        }
+        yield return new WaitForSeconds(1);
+        canMove = true;
     }
-
-
 }

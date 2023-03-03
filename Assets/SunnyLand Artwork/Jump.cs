@@ -6,14 +6,22 @@ using UnityEngine.EventSystems;
 public class Jump : MonoBehaviour, IPointerDownHandler, IPointerUpHandler
 {
     public PlayerController PlayerController;
+    bool isPressed = false;
+    private void Update()
+    {
+        if (isPressed)
+        {
+            PlayerController.JumpOrClimb();
+        }
+    }
     public void OnPointerDown(PointerEventData eventData)
     {
-        PlayerController.JumpOrClimb();
+        isPressed = true;
     }
 
     public void OnPointerUp(PointerEventData eventData)
     {
-       
+        isPressed = false;
     }
 }
 
